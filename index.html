@@ -68,6 +68,14 @@ input[type=number].editable::-webkit-inner-spin-button{-webkit-appearance:none;}
 .ch-icon{font-size:14px;margin-right:4px;}
 .section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--mt);margin:20px 0 10px;display:flex;align-items:center;gap:6px;}
 
+/* Manager table alignment */
+.manager-table{table-layout:fixed;}
+.manager-table .manager-name-cell{background:#FAFAF7;}
+.manager-table .manager-name-cell .editable{font-weight:600;}
+.manager-table .channel-name{font-weight:500;padding-left:10px;}
+.manager-table .total-label{font-weight:700;padding-left:10px;}
+.manager-table .num-input{text-align:left;}
+
 .modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:200;align-items:center;justify-content:center;}
 .modal-bg.open{display:flex;}
 .modal{background:var(--wh);border-radius:var(--r);padding:22px;width:320px;border:0.5px solid var(--br);}
@@ -271,41 +279,51 @@ function renderManagers(){
     </div>
   </div>`;
 
-  html += `<table>
+  html += `<table class="manager-table">
+    <colgroup>
+      <col style="width:190px">
+      <col style="width:150px">
+      <col style="width:130px">
+      <col style="width:110px">
+      <col style="width:110px">
+      <col style="width:105px">
+      <col style="width:56px">
+    </colgroup>
     <thead><tr>
-      <th style="width:150px">Менеджер</th>
-      <th style="width:120px">Канал</th>
-      <th style="width:120px">Прийнято лідів</th>
-      <th style="width:100px">Замовлень</th>
-      <th style="width:100px">Конверсія</th>
-      <th style="width:90px">План (${MGR_PLAN}%)</th>
-      <th style="width:50px"></th>
+      <th>Менеджер</th>
+      <th>Канал</th>
+      <th>Прийнято лідів</th>
+      <th>Замовлень</th>
+      <th>Конверсія</th>
+      <th>План (${MGR_PLAN}%)</th>
+      <th></th>
     </tr></thead>
     <tbody>
     ${list.map(m=>{
       let tl=0,to=0;
-      const rows = CHANNELS.map(ch=>{
-        const cv = mConvCh(m.channels[ch.id]);
-        tl+=m.channels[ch.id].leads;
-        to+=m.channels[ch.id].orders;
+
+      const channelRows = CHANNELS.map((ch,idx)=>{
+        const chData = m.channels[ch.id];
+        const cv = mConvCh(chData);
+        tl += chData.leads;
+        to += chData.orders;
+
         return `<tr class="ch-row">
-          <td></td>
-          <td><span class="cell"><i class="ti ${ch.icon}" style="color:${ch.color};font-size:14px;margin-right:5px;vertical-align:-2px"></i>${ch.name}</span></td>
-          <td><input type="number" class="editable" value="${m.channels[ch.id].leads}" onchange="updM(${m.id},'${ch.id}','leads',+this.value)" min="0"/></td>
-          <td><input type="number" class="editable" value="${m.channels[ch.id].orders}" onchange="updM(${m.id},'${ch.id}','orders',+this.value)" min="0"/></td>
+          ${idx===0 ? `<td rowspan="${CHANNELS.length+1}" class="manager-name-cell"><input class="editable" value="${m.name}" onchange="updMName(${m.id},this.value)"/></td>` : ``}
+          <td><span class="cell channel-name">${ch.name}</span></td>
+          <td><input type="number" class="editable num-input" value="${chData.leads}" onchange="updM(${m.id},'${ch.id}','leads',+this.value)" min="0"/></td>
+          <td><input type="number" class="editable num-input" value="${chData.orders}" onchange="updM(${m.id},'${ch.id}','orders',+this.value)" min="0"/></td>
           <td><span class="cell" style="font-weight:700;color:${cv>=MGR_PLAN?'var(--green)':'var(--red)'}">${cv}%</span></td>
           <td><span class="cell">${planHtml(cv,MGR_PLAN)}</span></td>
           <td></td>
         </tr>`;
-      });
+      }).join('');
+
       const totalConv = tl?Math.round(to/tl*100):0;
-      return `<tr>
-        <td rowspan="${CHANNELS.length+1}" style="border-bottom:1px solid var(--br)"><input class="editable" value="${m.name}" onchange="updMName(${m.id},this.value)" style="font-weight:600"/></td>
-        ${rows[0].replace('<tr class="ch-row"><td></td>','').replace('</tr>','')}
-      </tr>
-      ${rows.slice(1).join('')}
+
+      return `${channelRows}
       <tr class="total-row">
-        <td><span class="cell"><i class="ti ti-sum" style="font-size:13px;margin-right:4px;vertical-align:-1px"></i>Загально</span></td>
+        <td><span class="cell total-label">Загально</span></td>
         <td><span class="cell">${tl}</span></td>
         <td><span class="cell">${to}</span></td>
         <td><span class="cell" style="color:${totalConv>=MGR_PLAN?'var(--green)':'var(--red)'}">${totalConv}%</span></td>
@@ -319,7 +337,6 @@ function renderManagers(){
 
   document.getElementById('contentArea').innerHTML = html;
 }
-
 let _modalType = '';
 function openModal(type){ _modalType=type; document.getElementById('mName').value=''; document.getElementById('modalTitle').textContent=type==='sorter'?'Додати сортувальника':'Додати менеджера'; document.getElementById('modalBg').classList.add('open'); }
 function closeModal(){ document.getElementById('modalBg').classList.remove('open'); }
